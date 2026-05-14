@@ -12,12 +12,50 @@ import json
 
 np.random.seed(42)
 
+noise_modes = ['random', ]
+
+def generate_params_from_recovery_group(recovery_group):
+    if recovery_group == 0: 
+        return {
+            'ymax': 10000,
+            't0': 100,
+            'k': 0.2,
+            'noise': 100,
+            't1': 365,
+            'burn_in_time': 6*7,
+            'optimum_time': 365,
+            'stagnated_level': 1.0,
+        }
+    elif recovery_group == 1: 
+        return {
+            'ymax': 8000,
+            't0': 140,
+            'k': 0.1,
+            'noise': 200,
+            't1': 999,
+            'burn_in_time': 6*7,
+            'optimum_time': 999,
+            'stagnated_level': 1.0,
+        }
+    elif recovery_group == 2: 
+        return {
+            'ymax': 6000,
+            't0': 300,
+            'k': 0.1,
+            'noise': 150,
+            't1': 999,
+            'burn_in_time': 6*7,
+            'optimum_time': 999,
+            'stagnated_level': 1.0,
+        }
+    else: 
+        raise ValueError(f"Invalid recovery group: {recovery_group}")
+
 def generate_one_doubly_logistic_growth(
     pre_treatment_days = None, 
     ymax = 15000, 
     t0 = 60, 
     k = 0.1, 
-    noise = 0.1, 
     t1 = 200, 
     burn_in_time = 10, 
     optimum_time = 20, 
@@ -45,13 +83,84 @@ def generate_one_doubly_logistic_growth(
         y[t] = stagnated_level * ymax + (1 - stagnated_level) * ymax / (1 + np.exp(k * (t - burn_in_time - 2*t0 - optimum_time - t1)))
         if y[t] < stagnated_level * ymax: 
             y[t] = stagnated_level * ymax
-
-    y = np.ceil(y)
-    df = pd.DataFrame({"day": np.arange(len(y)), "steps": y})
-    return df
+    
 
 
+    return y
 
+def generate_noise(sigma, length = 365,mode = 'random'):
+    assert mode in noise_modes, f"mode must be one of {noise_modes}; got {mode}"
+
+    if mode == 'random':
+        return np.random.normal(0, sigma, length)
+    
+    else:
+        raise NotImplementedError
+
+
+
+
+
+
+if __name__ == "__main__": 
+    df = pd.DataFrame()
+
+    # generating 9 synthetic patients, 3 per recovery group
+    patient_id = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    recovery_group = [item for item in [0, 1, 2] for _ in range(3)]
+
+    for patient_id, recovery_group in zip(patient_id, recovery_group):
+        print(f'generating recovery group {recovery_group}')
+        params = generate_params_from_recovery_group(recovery_group)
+        ymax = params['ymax']
+        t0 = params['t0']
+        k = params['k']
+        noise = params['noise']
+        t1 = params['t1']
+        burn_in_time = params['burn_in_time']
+        optimum_time = params['optimum_time']
+        stagnated_level = params['stagnated_level']
+        print(f'ymax: {ymax}, t0: {t0}, k: {k}, noise: {noise}, t1: {t1}, burn_in_time: {burn_in_time}, optimum_time: {optimum_time}, stagnated_level: {stagnated_level}')
+
+        y = generate_one_doubly_logistic_growth(
+            ymax=ymax, t0=t0, k=k, t1=t1,
+            burn_in_time=burn_in_time, optimum_time=optimum_time,
+            stagnated_level=stagnated_level,
+        )
+        y = y + generate_noise(noise, len(y))
+        df_sub = pd.DataFrame({"day": np.arange(len(y)), "steps": y})
+        df_sub['id'] = patient_id
+        df_sub['recovery_group'] = recovery_group
+        df = pd.concat([df, df_sub])
+
+    os.makedirs("outputs", exist_ok=True)
+    df.to_csv("outputs/df.csv", index=False)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    # Plot the three trajectories on the same figure, use a different color and label for each recovery group
+    colors = ['steelblue', 'orange', 'yellow']
+    labels = ['Group 0: Typical Recovery', 'Group 1: Stagnated w/ Recovery', 'Group 2: Very Stagnated']
+    for idx, id in enumerate([2, 5, 8]):
+        df_sub = df[df['id'] == id]
+        ax.plot(
+            df_sub['day'].values,
+            df_sub['steps'].values,
+            linewidth=1.5,
+            color=colors[idx],
+            label=labels[idx]
+        )
+    ax.axhline(15000, color="red", linestyle="--", linewidth=1.0, label="ymax = 15 000")
+    ax.set_xlabel("Day")
+    ax.set_ylabel("Daily Steps")
+    ax.set_title("Synthetic Baseline Daily Step Count - All Recovery Groups")
+    ax.legend()
+    sns.despine()
+    plt.tight_layout()
+    fig.savefig("outputs/baseline_plot.png", dpi=150)
+    print("Saved baseline_plot.png to outputs/")
+  
+
+### deprecated
+'''
 def generate_one_baseline(
     recovery_group, 
     # pre_treatment_days = None, 
@@ -64,30 +173,6 @@ def generate_one_baseline(
 
     # generate the baseline daily step for a single patient over 365 days
 
-    '''args: 
-    - recovery_group: 0, 1 or 2; representing three different recovery groups. recovery group is assumed to be not associated with flare behaviour or missingness behaviour. 
-        - both group 0 and 1 feature a s-shaped growth pattern realised via a logistic growth function: 
-            - y(t) = ymax / (1 + exp(-k * (t - t0)))
-        
-
-    kwargs: 
-
-    - pre_treatment_days: if given, will be appended to the start of the baseline daily step. 
-
-    - ymax: max daily step, default to 15000
-
-    - t0: midpoint of growth
-    
-    - k: "intrinsic growth rate"
-
-    - scale: global scale, default to 1.0
-
-    - noise: noise level, currently deprecated
-
-    - t1: midpoint of stagnation
-
-
-    '''
 
     # weekly periodic variation
 
@@ -142,26 +227,21 @@ def generate_one_baseline(
             y[t] = B - ymax / (1 + np.exp(-k * (t - optimum_time - t1)))
             if y[t] < stagnated_prop * ymax: 
                 y[t] = stagnated_prop * ymax
-        '''
-        elif recovery_group == 2: 
-            # very stagnated growth
-            rate = kwargs.get("rate", 10)
-            burn_in_time = kwargs.get("burn_in_time", 6*7 + 1)
-            ymax = kwargs.get("ymax", 15000)
 
-            for t in range(1, burn_in_time): 
-                y[t] = y[t-1] + np.random.normal(0, 50)
-                y[t] = max(0, y[t])
+    elif recovery_group == 2: 
+        # very stagnated growth
+        rate = kwargs.get("rate", 10)
+        burn_in_time = kwargs.get("burn_in_time", 6*7 + 1)
+        ymax = kwargs.get("ymax", 15000)
 
-            for t in range(burn_in_time, 365): 
-                y[t] = y[t-1] + rate
-                if y[t] > ymax: 
-                    y[t] = ymax
-        '''
+        for t in range(1, burn_in_time): 
+            y[t] = y[t-1] + np.random.normal(0, 50)
+            y[t] = max(0, y[t])
 
-    else: 
-
-        raise NotImplementedError
+        for t in range(burn_in_time, 365): 
+            y[t] = y[t-1] + rate
+            if y[t] > ymax: 
+                y[t] = ymax
 
     
     y = np.ceil(y)
@@ -171,85 +251,4 @@ def generate_one_baseline(
 
     return df
 
-def generate_params_from_recovery_group(recovery_group):
-    if recovery_group == 0: 
-        return {
-            'ymax': 10000,
-            't0': 100,
-            'k': 0.1,
-            'noise': 0.1,
-            't1': 365,
-            'burn_in_time': 6*7,
-            'optimum_time': 365,
-            'stagnated_level': 1.0,
-        }
-    elif recovery_group == 1: 
-        return {
-            'ymax': 8000,
-            't0': 140,
-            'k': 0.1,
-            'noise': 0.1,
-            't1': 999,
-            'burn_in_time': 6*7,
-            'optimum_time': 999,
-            'stagnated_level': 1.0,
-        }
-    elif recovery_group == 2: 
-        return {
-            'ymax': 6000,
-            't0': 200,
-            'k': 0.1,
-            'noise': 0.1,
-            't1': 999,
-            'burn_in_time': 6*7,
-            'optimum_time': 999,
-            'stagnated_level': 1.0,
-        }
-    else: 
-        raise ValueError(f"Invalid recovery group: {recovery_group}")
-    return params
-
-if __name__ == "__main__": 
-    df = pd.DataFrame()
-    for recovery_group in [0, 1, 2]:
-        print(f'generating recovery group {recovery_group}')
-        params = generate_params_from_recovery_group(recovery_group)
-        ymax = params['ymax']
-        t0 = params['t0']
-        k = params['k']
-        noise = params['noise']
-        t1 = params['t1']
-        burn_in_time = params['burn_in_time']
-        optimum_time = params['optimum_time']
-        stagnated_level = params['stagnated_level']
-        print(f'ymax: {ymax}, t0: {t0}, k: {k}, noise: {noise}, t1: {t1}, burn_in_time: {burn_in_time}, optimum_time: {optimum_time}, stagnated_level: {stagnated_level}')
-        df_sub = generate_one_doubly_logistic_growth(ymax, t0, k, noise, t1, burn_in_time, optimum_time, stagnated_level)
-        df_sub['id'] = recovery_group
-        df_sub['recovery_group'] = recovery_group
-        df = pd.concat([df, df_sub])
-
-    os.makedirs("outputs", exist_ok=True)
-    df.to_csv("outputs/df.csv", index=False)
-    fig, ax = plt.subplots(figsize=(12, 4))
-    # Plot the three trajectories on the same figure, use a different color and label for each recovery group
-    colors = ['steelblue', ]
-    labels = ['Group 0: Typical Recovery', ]
-    for idx, recovery_group in enumerate([0, ]):
-        df_sub = df[df['recovery_group'] == recovery_group]
-        ax.plot(
-            df_sub['day'].values,
-            df_sub['steps'].values,
-            linewidth=1.5,
-            color=colors[idx],
-            label=labels[idx]
-        )
-    ax.axhline(15000, color="red", linestyle="--", linewidth=1.0, label="ymax = 15 000")
-    ax.set_xlabel("Day")
-    ax.set_ylabel("Daily Steps")
-    ax.set_title("Synthetic Baseline Daily Step Count - All Recovery Groups")
-    ax.legend()
-    sns.despine()
-    plt.tight_layout()
-    fig.savefig("outputs/baseline_plot.png", dpi=150)
-    print("Saved baseline_plot.png to outputs/")
-  
+'''
