@@ -13,10 +13,12 @@ This project simulates daily step-count recovery trajectories for 365 days after
   - Final dataset containing simulated trajectories
 
 ## Requirements
-- 
-- 
-- 
-- 
+- Python 3+
+- numpy
+- pandas
+- matplotlib
+- seaborn
+- pyyaml
 
 ## Setup
 
@@ -68,6 +70,9 @@ This workflow adds realistic wearable-device missingness patterns to the simulat
 - `df_missing_final.rds`
   - Final dataset containing simulated missingness
 
+## Requirements
+- 
+
 ## Missingness mechanisms
 
 The simulation includes several realistic missingness mechanisms commonly observed in wearable-device studies:
@@ -83,8 +88,6 @@ The simulation includes several realistic missingness mechanisms commonly observ
 
 4. Behavioural dropout (MNAR)
    - Longer periods of missingness among individuals with persistently low activity levels
-
-## Parameters
 
 ### Follow-up duration
 
