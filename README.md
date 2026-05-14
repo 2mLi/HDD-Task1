@@ -30,7 +30,7 @@ A `environment.yml` file is provided with version numbers
 - `trajectory_missingness_plot.png`
   - Visualisation of complete and observed trajectories
 
-- `df_missing_final.rds`
+- `df_missing_final.csv`
   - Final dataset containing simulated missingness
 
 ## Run 
