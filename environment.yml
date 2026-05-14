@@ -1,0 +1,11 @@
+name: hrfh-task1
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy>=1.24
+  - pandas>=2.1
+  - matplotlib>=3.8
+  - seaborn>=0.12
+  - pyyaml>=6.0
