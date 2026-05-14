@@ -4,17 +4,26 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import sys
-import random
-import time
-import datetime
-import json
+
+import yaml
 
 
 np.random.seed(666)
 
 noise_modes = ['random', ]
 
-def generate_params_from_recovery_group(recovery_group, randomised = True):
+def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_params=None):
+    """Return generation parameters for a given recovery group.
+
+    If *yaml_params* is provided (a dict keyed by group index as loaded from
+    params.yaml), the group's entry is returned directly and *randomised* is
+    ignored.  Otherwise the hardcoded defaults / random ranges are used.
+    """
+    if yaml_params is not None:
+        if recovery_group not in yaml_params:
+            raise ValueError(f"Recovery group {recovery_group} not found in yaml_params")
+        return dict(yaml_params[recovery_group])
+
     if recovery_group == 0: 
         if randomised:
             return {
@@ -139,9 +148,8 @@ def generate_noise(sigma, length = 365,mode = 'random'):
 
 
 
-
-if __name__ == "__main__": 
-
+def run_default(): 
+    print("Running a built-in example")
     # simple demo - generate 9 trajectories, 3 per group
     df = pd.DataFrame()
 
@@ -185,7 +193,7 @@ if __name__ == "__main__":
         ['#a8d5b0', '#66bb6a', '#1b5e20'],   # group 1: light → dark green
         ['#ffe08a', '#ffa726', '#e65100'],   # group 2: light → dark orange
     ]
-    group_labels = ['Group blue: Typical Recovery', 'Group green: Stagnated w/ Recovery', 'Group orange: Very Stagnated']
+    group_labels = ['Group blue', 'Group green', 'Group orange']
     added_group_label = [False, False, False]
     for patient_id in range(9):
         group = patient_id // 3
@@ -205,11 +213,77 @@ if __name__ == "__main__":
     ax.set_ylabel("Daily Steps")
     ax.set_title("Synthetic Baseline Daily Step Count - All Recovery Groups")
     ax.legend()
-    sns.despine()
     plt.tight_layout()
     fig.savefig("outputs/baseline_plot.png", dpi=150)
     print("Saved baseline_plot.png to outputs/")
-  
+
+def run_from_yaml(config_file):
+    with open(config_file, 'r') as file:
+        raw = yaml.safe_load(file)
+
+    # Support both a bare dict (keys 0/1/2) and a wrapped dict (args: {0: ...})
+    yaml_params = raw.get('args', raw)
+    # YAML integer keys may be loaded as strings; normalise to int
+    yaml_params = {int(k): v for k, v in yaml_params.items()}
+
+    print(f"Running with config from {config_file}: {yaml_params}")
+
+    df = pd.DataFrame()
+    patient_id = 0
+    for recovery_group, group_cfg in sorted(yaml_params.items()):
+        n_patients = int(group_cfg.get('n', 3))
+        for _ in range(n_patients):
+            params = generate_params_from_recovery_group(
+                recovery_group, yaml_params=yaml_params
+            )
+            y = generate_one_doubly_logistic_growth(
+                ymax=params['ymax'],
+                t0=params['t0'],
+                k=params['k'],
+                t1=params['t1'],
+                burn_in_time=params['burn_in_time'],
+                optimum_time=params['optimum_time'],
+                stagnated_level=params['stagnated_level'],
+            )
+            y = y + generate_noise(params['noise'], len(y))
+            ymin = 25
+            y[y < ymin] = ymin
+            y = np.ceil(y)
+            df_sub = pd.DataFrame({"day": np.arange(len(y)), "steps": y})
+            df_sub['id'] = patient_id
+            df_sub['recovery_group'] = recovery_group
+            df = pd.concat([df, df_sub])
+            patient_id += 1
+
+    os.makedirs("outputs", exist_ok=True)
+    df.to_csv("outputs/df.csv", index=False)
+    print(f"Saved {patient_id} patient trajectories to outputs/df.csv")
+
+
+if __name__ == "__main__": 
+
+    # read parameter if existing
+    import argparse
+    import yaml
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "config",
+        nargs="?",
+        default=None,
+        help="YAML config file; if not provided, a built-in example will be used instead",
+    )
+
+
+    args = parser.parse_args()
+
+    if args.config is None:
+        run_default()
+
+    else:
+        run_from_yaml(args.config)
+
+
+
 
 ### deprecated
 '''
