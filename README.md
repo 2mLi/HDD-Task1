@@ -19,7 +19,7 @@ A `environment.yml` file is provided with version numbers
 ## Contents
 
 - `synthetic_data.py`
-  - R script for adding realistic missingness to the simulated trajectories
+  - python script for simulating trajectories
 
 - `outputs/df.csv`
   - Final dataset containing simulated trajectories
