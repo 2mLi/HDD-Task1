@@ -3,8 +3,13 @@
 ## Overview
 This project simulates daily step-count recovery trajectories for 365 days after knee surgery, including realistic individual variability and missingness.
 
-## Files
+## Contents
 
+- `synthetic_data.py`
+  - R script for adding realistic missingness to the simulated trajectories
+
+- `outputs/df.csv`
+  - Final dataset containing simulated trajectories
 
 ## Requirements
 - 
@@ -13,11 +18,12 @@ This project simulates daily step-count recovery trajectories for 365 days after
 - 
 
 ## Setup
-choose values of ymax that match behaviour of patient before surgery and t0 and t1
 
 ## Run 
 
 ## Trajectory parameters
+
+params.yaml contains the following trajectory defining parameters, which can be edited to reflect custom population
 
 The simulator uses three trajectory groups with different recovery dynamics.
 
@@ -39,9 +45,6 @@ The simulator uses three trajectory groups with different recovery dynamics.
 | `burn_in_time` | Early post-op low-activity period |
 | `optimum_time` | Length of time during which best recovery is maintained |
 
-## Expected Outputs and File Locations
-Main output file
-- 'outputs/df.csv'
 
 # Missingness simulation
 
