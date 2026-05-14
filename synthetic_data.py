@@ -10,44 +10,82 @@ import datetime
 import json
 
 
-np.random.seed(42)
+np.random.seed(666)
 
 noise_modes = ['random', ]
 
-def generate_params_from_recovery_group(recovery_group):
+def generate_params_from_recovery_group(recovery_group, randomised = True):
     if recovery_group == 0: 
-        return {
-            'ymax': 10000,
-            't0': 100,
-            'k': 0.2,
-            'noise': 100,
-            't1': 365,
-            'burn_in_time': 6*7,
-            'optimum_time': 365,
-            'stagnated_level': 1.0,
-        }
+        if randomised:
+            return {
+                'ymax': np.random.randint(8000, 12000),
+                't0': np.random.randint(75, 125),
+                'k': np.random.uniform(0.05, 0.075),
+                'noise': np.random.randint(100, 500),
+                't1': 365,
+                'burn_in_time': 6*7, 
+                'optimum_time': 365,
+                'stagnated_level': 1.0,
+            }
+        else:
+            return {
+                'ymax': 10000,
+                't0': 100,
+                'k': 0.1,
+                'noise': 400,
+                't1': 365,
+                'burn_in_time': 6*7, 
+                'optimum_time': 365,
+                'stagnated_level': 1.0,
+            }
+        
     elif recovery_group == 1: 
-        return {
-            'ymax': 8000,
-            't0': 140,
-            'k': 0.1,
-            'noise': 200,
-            't1': 999,
-            'burn_in_time': 6*7,
-            'optimum_time': 999,
-            'stagnated_level': 1.0,
-        }
+        if randomised:
+            return {
+                'ymax': np.random.randint(6000, 8000),
+                't0': np.random.randint(100, 180),
+                'k': np.random.uniform(0.03, 0.05),
+                'noise': np.random.randint(200, 250),
+                't1': 999,
+                'burn_in_time': 6*7, 
+                'optimum_time': 999,
+                'stagnated_level': 1.0,
+            }
+        else:
+            return {
+                'ymax': 8000,
+                't0': 140,
+                'k': 0.1,
+                'noise': 400,
+                't1': 999,
+                'burn_in_time': 6*7,
+                'optimum_time': 999,
+                'stagnated_level': 1.0,
+            }
+        
     elif recovery_group == 2: 
-        return {
-            'ymax': 6000,
-            't0': 300,
-            'k': 0.1,
-            'noise': 150,
-            't1': 999,
-            'burn_in_time': 6*7,
-            'optimum_time': 999,
-            'stagnated_level': 1.0,
-        }
+        if randomised:
+            return {
+                'ymax': np.random.randint(4000, 5000),
+                't0': np.random.randint(100, 300),
+                'k': np.random.uniform(0.02, 0.03),
+                'noise': np.random.randint(200, 250),
+                't1': 999,
+                'burn_in_time': 6*7, 
+                'optimum_time': 999,
+                'stagnated_level': 1.0,
+            }
+        else: 
+            return {
+                'ymax': 6000,
+                't0': 300,
+                'k': 0.025,
+                'noise': 500,
+                't1': 999,
+                'burn_in_time': 42,
+                'optimum_time': 999,
+                'stagnated_level': 1.0,
+            }
     else: 
         raise ValueError(f"Invalid recovery group: {recovery_group}")
 
@@ -103,6 +141,8 @@ def generate_noise(sigma, length = 365,mode = 'random'):
 
 
 if __name__ == "__main__": 
+
+    # simple demo - generate 9 trajectories, 3 per group
     df = pd.DataFrame()
 
     # generating 9 synthetic patients, 3 per recovery group
@@ -111,7 +151,7 @@ if __name__ == "__main__":
 
     for patient_id, recovery_group in zip(patient_id, recovery_group):
         print(f'generating recovery group {recovery_group}')
-        params = generate_params_from_recovery_group(recovery_group)
+        params = generate_params_from_recovery_group(recovery_group, randomised = True)
         ymax = params['ymax']
         t0 = params['t0']
         k = params['k']
@@ -135,20 +175,29 @@ if __name__ == "__main__":
 
     os.makedirs("outputs", exist_ok=True)
     df.to_csv("outputs/df.csv", index=False)
-    fig, ax = plt.subplots(figsize=(12, 6))
-    # Plot the three trajectories on the same figure, use a different color and label for each recovery group
-    colors = ['steelblue', 'orange', 'yellow']
-    labels = ['Group 0: Typical Recovery', 'Group 1: Stagnated w/ Recovery', 'Group 2: Very Stagnated']
-    for idx, id in enumerate([2, 5, 8]):
-        df_sub = df[df['id'] == id]
+    fig, ax = plt.subplots(figsize=(12, 8))
+    # Plot all 9 patients; patients in the same recovery group share a similar colour
+    group_colors = [
+        ['#99ccff', '#66b2ff', '#0066cc'],   # group 0: light → dark blue
+        ['#a8d5b0', '#66bb6a', '#1b5e20'],   # group 1: light → dark green
+        ['#ffe08a', '#ffa726', '#e65100'],   # group 2: light → dark orange
+    ]
+    group_labels = ['Group blue: Typical Recovery', 'Group green: Stagnated w/ Recovery', 'Group orange: Very Stagnated']
+    added_group_label = [False, False, False]
+    for patient_id in range(9):
+        group = patient_id // 3
+        shade = patient_id % 3
+        df_sub = df[df['id'] == patient_id]
+        label = group_labels[group] if not added_group_label[group] else None
+        added_group_label[group] = True
         ax.plot(
             df_sub['day'].values,
             df_sub['steps'].values,
             linewidth=1.5,
-            color=colors[idx],
-            label=labels[idx]
+            color=group_colors[group][shade],
+            label=label
         )
-    ax.axhline(15000, color="red", linestyle="--", linewidth=1.0, label="ymax = 15 000")
+    # ax.axhline(15000, color="red", linestyle="--", linewidth=1.0, label="ymax = 15 000")
     ax.set_xlabel("Day")
     ax.set_ylabel("Daily Steps")
     ax.set_title("Synthetic Baseline Daily Step Count - All Recovery Groups")

@@ -1,0 +1,11 @@
+args: 
+  recovery_group: 0
+  randomised: False
+  ymax: 10000
+  t0: 100
+  k: 0.1
+  noise: 400
+  t1: 365
+  burn_in_time: 6*7
+  optimum_time: 365
+  stagnated_level: 1.0
