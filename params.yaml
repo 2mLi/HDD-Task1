@@ -3,28 +3,37 @@
   ymax: 10000
   t0: 100
   k: 0.1
+  kd: 0.1
   noise: 400
   t1: 365
   burn_in_time: 42
-  optimum_time: 365
+  optimum_time: 999
   stagnated_level: 1.0
+  tmax: 365
+  randomised_params: True
 1:
   n: 50
   ymax: 8000
   t0: 140
   k: 0.1
+  kd: 0.1
   noise: 400
   t1: 999
   burn_in_time: 42
   optimum_time: 999
   stagnated_level: 1.0
+  tmax: 365
+  randomised_params: True
 2:
   n: 30
   ymax: 6000
   t0: 300
   k: 0.025
+  kd: 0.025
   noise: 500
   t1: 999
   burn_in_time: 42
   optimum_time: 999
   stagnated_level: 1.0
+  tmax: 365
+  randomised_params: True

@@ -22,7 +22,22 @@ def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_pa
     if yaml_params is not None:
         if recovery_group not in yaml_params:
             raise ValueError(f"Recovery group {recovery_group} not found in yaml_params")
-        return dict(yaml_params[recovery_group])
+        if yaml_params[recovery_group]['randomised_params']:
+            base = yaml_params[recovery_group]
+            params = dict(base)
+            params['ymax'] = int(base['ymax'] * np.random.uniform(0.85, 1.15))
+            params['t0'] = int(base['t0'] * np.random.uniform(0.85, 1.15))
+            params['k'] = base['k'] * np.random.uniform(0.8, 1.2)
+            params['kd'] = base['kd'] * np.random.uniform(0.8, 1.2)
+            params['noise'] = int(base['noise'] * np.random.uniform(0.8, 1.2))
+            params['t1'] = int(base['t1'] * np.random.uniform(0.9, 1.1))
+            params['burn_in_time'] = int(base['burn_in_time'] * np.random.uniform(0.8, 1.2))
+            params['optimum_time'] = int(base['optimum_time'] * np.random.uniform(0.9, 1.1))
+            params['stagnated_level'] = float(np.clip(base['stagnated_level'] + np.random.uniform(-0.15, 0.15), 0.0, 1.0))
+            return params
+        else:
+            return dict(yaml_params[recovery_group])
+
 
     if recovery_group == 0: 
         if randomised:
@@ -30,22 +45,26 @@ def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_pa
                 'ymax': np.random.randint(8000, 12000),
                 't0': np.random.randint(75, 125),
                 'k': np.random.uniform(0.05, 0.075),
+                'kd': np.random.uniform(0.05, 0.075),
                 'noise': np.random.randint(100, 500),
                 't1': 365,
                 'burn_in_time': 6*7, 
                 'optimum_time': 365,
                 'stagnated_level': 1.0,
+                
             }
         else:
             return {
                 'ymax': 10000,
                 't0': 100,
-                'k': 0.1,
+                'k': 0.03,
                 'noise': 400,
                 't1': 365,
                 'burn_in_time': 6*7, 
                 'optimum_time': 365,
                 'stagnated_level': 1.0,
+                'kd': 0.1,
+                'tmax': 365,
             }
         
     elif recovery_group == 1: 
@@ -59,6 +78,8 @@ def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_pa
                 'burn_in_time': 6*7, 
                 'optimum_time': 999,
                 'stagnated_level': 1.0,
+                'kd': 0.1,
+                'tmax': 365,
             }
         else:
             return {
@@ -70,6 +91,8 @@ def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_pa
                 'burn_in_time': 6*7,
                 'optimum_time': 999,
                 'stagnated_level': 1.0,
+                'kd': 0.1,
+                'tmax': 365,
             }
         
     elif recovery_group == 2: 
@@ -83,6 +106,8 @@ def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_pa
                 'burn_in_time': 6*7, 
                 'optimum_time': 999,
                 'stagnated_level': 1.0,
+                'kd': 0.025,
+                'tmax': 365,
             }
         else: 
             return {
@@ -94,6 +119,24 @@ def generate_params_from_recovery_group(recovery_group, randomised=True, yaml_pa
                 'burn_in_time': 42,
                 'optimum_time': 999,
                 'stagnated_level': 1.0,
+                'kd': 0.025,
+                'tmax': 365,
+            }
+    elif recovery_group == 3:
+        if randomised:
+            raise NotImplementedError
+        else: 
+            return {
+                'ymax': 8000,
+                't0': 45,
+                'k': 0.025,
+                'noise': 500,
+                't1': 30,
+                'burn_in_time': 42,
+                'optimum_time': 75,
+                'stagnated_level': 0.6,
+                'kd': 0.025,
+                'tmax': 365,
             }
     else: 
         raise ValueError(f"Invalid recovery group: {recovery_group}")
@@ -216,6 +259,61 @@ def run_default():
     plt.tight_layout()
     fig.savefig("outputs/baseline_plot.png", dpi=150)
     print("Saved baseline_plot.png to outputs/")
+
+    # generating another toy example
+    patient_id = [0, 1]
+    recovery_group = [0, 3]
+    df = pd.DataFrame()
+
+    for patient_id, recovery_group in zip(patient_id, recovery_group):
+        print(f'generating recovery group {recovery_group}')
+        params = generate_params_from_recovery_group(recovery_group, randomised = False)
+        ymax = params['ymax']
+        t0 = params['t0']
+        k = params['k']
+        noise = params['noise']
+        t1 = params['t1']
+        burn_in_time = params['burn_in_time']
+        optimum_time = params['optimum_time']
+        stagnated_level = params['stagnated_level']
+        print(f'ymax: {ymax}, t0: {t0}, k: {k}, noise: {noise}, t1: {t1}, burn_in_time: {burn_in_time}, optimum_time: {optimum_time}, stagnated_level: {stagnated_level}')
+
+        y = generate_one_doubly_logistic_growth(
+            ymax=ymax, t0=t0, k=k, t1=t1,
+            burn_in_time=burn_in_time, optimum_time=optimum_time,
+            stagnated_level=stagnated_level,
+        )
+        y = y + generate_noise(noise, len(y))
+        ymin = 25
+        y[y < ymin] = ymin
+        y = np.ceil(y)
+        df_sub = pd.DataFrame({"day": np.arange(len(y)), "steps": y})
+        df_sub['id'] = patient_id
+        df_sub['recovery_group'] = recovery_group
+        df = pd.concat([df, df_sub])
+
+    
+    df.to_csv("outputs/df_extra.csv", index=False)
+    fig, ax = plt.subplots(figsize=(12, 8))
+    # Plot only the two example patient trajectories
+    trajectory_colors = ['#0066cc', '#ff0000']  # One blue (group 0), one red (group 3)
+    trajectory_labels = ['Group blue', 'Group red']
+    for patient_ix, patient_id in enumerate([0, 1]):
+        df_sub = df[df['id'] == patient_id]
+        ax.plot(
+            df_sub['day'].values,
+            df_sub['steps'].values,
+            linewidth=1.5,
+            color=trajectory_colors[patient_ix],
+            label=trajectory_labels[patient_ix]
+        )
+    ax.set_xlabel("Day")
+    ax.set_ylabel("Daily Steps")
+    ax.set_title("Synthetic Baseline Daily Step Count - Extra example")
+    ax.legend()
+    plt.tight_layout()
+    fig.savefig("outputs/baseline_plot_extra.png", dpi=150)
+    print("Saved baseline_plot_extra.png to outputs/")
 
 def run_from_yaml(config_file):
     with open(config_file, 'r') as file:
