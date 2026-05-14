@@ -224,3 +224,6 @@ ggsave(
 
 # save RDS
 saveRDS(df_missing_final,"df_missing_final.rds")
+
+# output
+write.csv(df_missing_final,"df_missing_final.csv")
