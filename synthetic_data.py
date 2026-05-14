@@ -100,6 +100,7 @@ def generate_one_doubly_logistic_growth(
     stagnated_level = 0.7, 
 ): 
     y = np.zeros(365)
+
     
     # init
     y[0] = 0
@@ -122,7 +123,6 @@ def generate_one_doubly_logistic_growth(
         if y[t] < stagnated_level * ymax: 
             y[t] = stagnated_level * ymax
     
-
 
     return y
 
@@ -168,6 +168,9 @@ if __name__ == "__main__":
             stagnated_level=stagnated_level,
         )
         y = y + generate_noise(noise, len(y))
+        ymin = 25
+        y[y < ymin] = ymin
+        y = np.ceil(y)
         df_sub = pd.DataFrame({"day": np.arange(len(y)), "steps": y})
         df_sub['id'] = patient_id
         df_sub['recovery_group'] = recovery_group
