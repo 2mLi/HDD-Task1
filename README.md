@@ -14,7 +14,7 @@ This project simulates daily step-count recovery trajectories for 365 days after
 - RStudio 4.5+
 - tidyverse
 
-A `envoronment.yml` file is provided with version numbers
+A `environment.yml` file is provided with version numbers
 
 ## Contents
 
