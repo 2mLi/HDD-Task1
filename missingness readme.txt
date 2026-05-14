@@ -83,6 +83,8 @@ The simulation includes several realistic missingness mechanisms commonly observ
 
 ## Parameters
 
+The following values were used as the default settings. They should be interpreted as adjustable assumptions rather than fixed values. Users can modify these parameters in `missingness.R` to explore alternative missingness scenarios.
+
 ### Follow-up duration
 
 - `followup_days = 365`
